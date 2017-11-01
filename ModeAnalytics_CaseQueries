@@ -1,0 +1,57 @@
+# https://community.modeanalytics.com/sql/tutorial/sql-business-analytics-training/
+# https://modeanalytics.com/editor/duff___phelps/reports/6aa945859e0f 
+
+# A DROP IN USER ENGAGEMENT
+
+# Growth over time, users and activated users
+# The growth rate is pretty consistent throughout the weeks - High growth on weekdays and lower growth on weekends
+
+select date_trunc('day',created_at) as day,
+  count(*) as all_users,
+  count(case when activated_at is not null then user_id else null end)as activated_users
+from tutorial.yammer_users users
+where created_at >= '2014-06-01'
+and created_at < '2014-09-01'
+group by 1
+order by 1
+
+# User cohorts - by signup week
+# We can see that our older users (10+ weeks of membership) are becoming less active
+
+select date_trunc('week',occurred_at) as week,
+  count(distinct case when user_age > 7*10 then user_id else null end) as ten_plus_weeks,
+  count(distinct case when user_age < 7*10 and user_age >= 7*9 then user_id else null end) as nine_weeks,
+  count(distinct case when user_age < 7*9 and user_age >= 7*8 then user_id else null end) as eight_weeks,
+  count(distinct case when user_age < 7*8 and user_age >= 7*7 then user_id else null end) as seven_weeks,
+  count(distinct case when user_age < 7*7 and user_age >= 7*6 then user_id else null end) as six_weeks,
+  count(distinct case when user_age < 7*6 and user_age >= 7*5 then user_id else null end) as five_weeks,
+  count(distinct case when user_age < 7*5 and user_age >= 7*4 then user_id else null end) as four_weeks,
+  count(distinct case when user_age < 7*4 and user_age >= 7*3 then user_id else null end) as three_weeks,
+  count(distinct case when user_age < 7*3 and user_age >= 7*2 then user_id else null end) as two_weeks,
+  count(distinct case when user_age < 7*2 and user_age >= 7*1 then user_id else null end) as one_week,
+  count(distinct case when user_age < 7*1 then user_id else null end) as less_than_one_week
+from (
+  select e.occurred_at,
+  u.user_id,
+  date_trunc('week',u.activated_at) as activation_week,
+  extract('day' from e.occurred_at - u.activated_at) as age_at_event,
+  extract('day' from '2014-09-01'::timestamp - u.activated_at) as user_age
+  from tutorial.yammer_users u
+  left join tutorial.yammer_events e
+  on u.user_id = e.user_id
+  and e.event_type = 'engagement'
+  and e.event_name = 'login'
+  and e.occurred_at >= '2014-05-01'
+  where u.activated_at is not null
+  ) t
+where activation_week is not null
+group by 1
+order by 1
+
+# Broken feature
+# Broken tracking code
+# Traffic anomalies from bots
+# Traffic shutdown to your site
+# Marketing event
+# Bad data
+# Search crawler changes
