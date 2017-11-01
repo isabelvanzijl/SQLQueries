@@ -3,7 +3,7 @@
 
 # A DROP IN USER ENGAGEMENT
 
-# Growth over time, users and activated users
+# 1 - Growth over time, users and activated users
 # The growth rate is pretty consistent throughout the weeks - High growth on weekdays and lower growth on weekends
 
 select date_trunc('day',created_at) as day,
@@ -15,7 +15,7 @@ and created_at < '2014-09-01'
 group by 1
 order by 1
 
-# User cohorts - by signup week
+# 2 - User cohorts - by signup week
 # We can see that our older users (10+ weeks of membership) are becoming less active
 
 select date_trunc('week',occurred_at) as week,
@@ -48,7 +48,18 @@ where activation_week is not null
 group by 1
 order by 1
 
-# Broken feature
+# 3 - Weekly device usage
+# Though all three devices (computer, phone, tablet) have a drop in usage in the beginning of August, phones have the biggest drop
+
+select date_trunc('week',occurred_at) as week,
+  count(distinct case when device in ('macbook pro','lenovo thinkpad','macbook air','dell inspiron notebook','asus chromebook','dell inspiron desktop','acer aspire notebook','hp pavilion desktop','acer aspire desktop','mac mini') then user_id else null end) as computer,
+  count(distinct case when device in ('iphone 5','samsung galaxy s4','nexus 5','iphone 5s','iphone 4s','nokia lumia 635','htc one','samsung galaxy note','amazon fire phone') then user_id else null end) as phone,
+  count(distinct case when device in ('ipad air','nexus 7','ipad mini','nexus 10','kindle fire','windows surface','samsung galaxy tablet') then user_id else null end) as tablet
+from tutorial.yammer_events 
+where event_type = 'engagement' and event_name = 'login'
+group by 1
+order by 1
+
 # Broken tracking code
 # Traffic anomalies from bots
 # Traffic shutdown to your site
