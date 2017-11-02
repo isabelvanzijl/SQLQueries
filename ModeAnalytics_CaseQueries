@@ -1,10 +1,10 @@
-# https://community.modeanalytics.com/sql/tutorial/sql-business-analytics-training/
-# https://modeanalytics.com/editor/duff___phelps/reports/6aa945859e0f 
+# The case: https://community.modeanalytics.com/sql/tutorial/a-drop-in-user-engagement/
+# Mode report: https://modeanalytics.com/editor/duff___phelps/reports/6aa945859e0f 
 
 # A DROP IN USER ENGAGEMENT
 
 # 1 - Growth over time, users and activated users
-# The growth rate is pretty consistent throughout the weeks - High growth on weekdays and lower growth on weekends
+# The growth rate is pretty consistent throughout the weeks - high growth on weekdays and lower growth on weekends
 
 select date_trunc('day',created_at) as day,
   count(*) as all_users,
@@ -72,3 +72,41 @@ select date_trunc('week', occurred_at) as week,
 from tutorial.yammer_emails
 group by 1
 order by 1
+
+# 5 - Open Rate and CTR
+# We can see that of the open rates and click through rates plotted here, there is only a noticeable drop off for the weekly email click through rate
+# CTRs are much lower than opening rates, but this is to be somewhat expected
+
+select week,
+  weekly_opens/(case when weekly_emails = 0 then 1 else weekly_emails end) ::float as weekly_open_rate,
+  weekly_ctr/(case when weekly_opens = 0 then 1 else weekly_opens end) ::float as weekly_ctr,
+  retain_opens/(case when retain_emails = 0 then 1 else retain_emails end) ::float as retain_open_rate,
+  retain_ctr/(case when retain_opens = 0 then 1 else retain_opens end) ::float as retain_ctr
+from (
+  select date_trunc('week',e1.occurred_at) as week,
+    count(case when e1.action = 'sent_weekly_digest' then e1.user_id else null end) as weekly_emails,
+    count(case when e1.action = 'sent_weekly_digest' then e2.user_id else null end) as weekly_opens,
+    count(case when e1.action = 'sent_weekly_digest' then e3.user_id else null end) as weekly_ctr,
+    count(case when e1.action = 'sent_reengagement_email' then e1.user_id else null end) as retain_emails,
+    count(case when e1.action = 'sent_reengagement_email' then e2.user_id else null end) as retain_opens,
+    count(case when e1.action = 'sent_reengagement_email' then e3.user_id else null end) as retain_ctr
+  from tutorial.yammer_emails e1
+  left join tutorial.yammer_emails e2
+  on e1.user_id = e2.user_id
+  and e2.occurred_at >= e1.occurred_at
+  and e2.occurred_at < e1.occurred_at + interval '5 minute'
+  and e2.action = 'email_open'
+  left join tutorial.yammer_emails e3
+  on e3.user_id = e2.user_id
+  and e3.occurred_at >= e2.occurred_at
+  and e3.occurred_at < e2.occurred_at + interval '5 minute'
+  and e3.action = 'email_clickthrough'
+  where e1.occurred_at >= '2014-06-01'
+  and e1.action in ('sent_weekly_digest','sent_reengagement_email')
+  group by 1
+  ) t
+order by 1
+
+# CONCLUSIONS
+# From our analysis, it looks that the drop in user engagement is due to issues with the mobile app as well as the weekly digest emails.
+# 
